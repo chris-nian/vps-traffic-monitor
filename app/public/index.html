@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPS 流量监控仪表板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e4e4e7;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: #a1a1aa;
+            font-size: 1.1em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-card .label {
+            color: #a1a1aa;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #e4e4e7;
+        }
+
+        .stat-card .unit {
+            font-size: 0.5em;
+            color: #71717a;
+            margin-left: 5px;
+        }
+
+        .stat-card.rx { border-left: 4px solid #00d9ff; }
+        .stat-card.tx { border-left: 4px solid #00ff88; }
+        .stat-card.alert { border-left: 4px solid #ff6b6b; }
+        .stat-card.connections { border-left: 4px solid #ffd93d; }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 30px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-header h2 {
+            font-size: 1.3em;
+            color: #e4e4e7;
+        }
+
+        .time-range {
+            display: flex;
+            gap: 10px;
+        }
+
+        .time-range button {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #e4e4e7;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .time-range button:hover,
+        .time-range button.active {
+            background: rgba(0, 217, 255, 0.3);
+            color: #00d9ff;
+        }
+
+        .chart {
+            height: 300px;
+            position: relative;
+        }
+
+        .alerts-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 30px;
+        }
+
+        .alerts-section h2 {
+            margin-bottom: 20px;
+            color: #e4e4e7;
+        }
+
+        .alert-item {
+            background: rgba(255, 107, 107, 0.1);
+            border-left: 4px solid #ff6b6b;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .alert-item .message {
+            flex: 1;
+        }
+
+        .alert-item .time {
+            color: #a1a1aa;
+            font-size: 0.9em;
+        }
+
+        .alert-item.info {
+            background: rgba(0, 217, 255, 0.1);
+            border-left-color: #00d9ff;
+        }
+
+        .firewall-logs {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .firewall-logs h2 {
+            margin-bottom: 20px;
+            color: #e4e4e7;
+        }
+
+        .log-entry {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            margin-bottom: 8px;
+            border-radius: 4px;
+            color: #a1a1aa;
+        }
+
+        .log-entry.dropped {
+            color: #ff6b6b;
+        }
+
+        .last-update {
+            text-align: center;
+            color: #71717a;
+            margin-top: 30px;
+            font-size: 0.9em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #a1a1aa;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 VPS 流量监控中心</h1>
+            <p class="subtitle">实时监控 · 异常检测 · 安全防护</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card rx">
+                <div class="label">接收速率</div>
+                <div class="value" id="rx-rate">-- <span class="unit">KB/s</span></div>
+            </div>
+            <div class="stat-card tx">
+                <div class="label">发送速率</div>
+                <div class="value" id="tx-rate">-- <span class="unit">KB/s</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="label">总接收</div>
+                <div class="value" id="total-rx">-- <span class="unit">GB</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="label">总发送</div>
+                <div class="value" id="total-tx">-- <span class="unit">GB</span></div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-header">
+                <h2>📊 流量趋势</h2>
+                <div class="time-range">
+                    <button onclick="changeTimeRange('1h')" class="active">1小时</button>
+                    <button onclick="changeTimeRange('6h')">6小时</button>
+                    <button onclick="changeTimeRange('24h')">24小时</button>
+                </div>
+            </div>
+            <div class="chart">
+                <canvas id="trafficChart"></canvas>
+            </div>
+        </div>
+
+        <div class="alerts-section">
+            <h2>🚨 最近告警</h2>
+            <div id="alerts-container">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+
+        <div class="firewall-logs">
+            <h2>🛡️ 防火墙日志</h2>
+            <div id="firewall-logs-container">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+
+        <div class="last-update">
+            最后更新: <span id="last-update-time">--</span>
+            <div class="progress-bar">
+                <div class="fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        let trafficChart;
+        let currentTimeRange = '1h';
+        const socket = io();
+
+        // Format bytes to human readable
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Format timestamp
+        function formatTime(timestamp) {
+            return new Date(timestamp).toLocaleString('zh-CN');
+        }
+
+        // Initialize chart
+        function initChart() {
+            const ctx = document.getElementById('trafficChart').getContext('2d');
+            trafficChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: '接收流量 (KB/s)',
+                            data: [],
+                            borderColor: '#00d9ff',
+                            backgroundColor: 'rgba(0, 217, 255, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: '发送流量 (KB/s)',
+                            data: [],
+                            borderColor: '#00ff88',
+                            backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#e4e4e7'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#a1a1aa'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#a1a1aa'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update data
+        async function updateData() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+
+                // Update current stats
+                if (data.current) {
+                    document.getElementById('total-rx').innerHTML =
+                        formatBytes(data.current.rx_bytes) + '<span class="unit"></span>';
+                    document.getElementById('total-tx').innerHTML =
+                        formatBytes(data.current.tx_bytes) + '<span class="unit"></span>';
+                }
+
+                // Get live rates
+                const liveResponse = await fetch('/api/live');
+                const liveData = await liveResponse.json();
+
+                if (liveData.rates) {
+                    document.getElementById('rx-rate').innerHTML =
+                        liveData.rates.rx + '<span class="unit"></span>';
+                    document.getElementById('tx-rate').innerHTML =
+                        liveData.rates.tx + '<span class="unit"></span>';
+                }
+
+                // Update chart
+                updateChart(data.history);
+
+                // Update alerts
+                updateAlerts(data.alerts);
+
+                // Update firewall logs
+                updateFirewallLogs(data.firewall_logs);
+
+                // Update timestamp
+                document.getElementById('last-update-time').textContent = formatTime(Date.now());
+
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        // Update chart based on time range
+        function updateChart(history) {
+            if (!history || history.length === 0) return;
+
+            let filteredHistory = history;
+            const now = Date.now();
+
+            switch (currentTimeRange) {
+                case '1h':
+                    filteredHistory = history.filter(d => now - d.timestamp <= 3600000);
+                    break;
+                case '6h':
+                    filteredHistory = history.filter(d => now - d.timestamp <= 21600000);
+                    break;
+                case '24h':
+                    filteredHistory = history.filter(d => now - d.timestamp <= 86400000);
+                    break;
+            }
+
+            // Calculate rates
+            const labels = [];
+            const rxData = [];
+            const txData = [];
+
+            for (let i = 1; i < filteredHistory.length; i++) {
+                const current = filteredHistory[i];
+                const previous = filteredHistory[i - 1];
+                const timeDiff = (current.timestamp - previous.timestamp) / 1000;
+
+                if (timeDiff > 0) {
+                    const rxRate = (current.rx_bytes - previous.rx_bytes) / timeDiff / 1024;
+                    const txRate = (current.tx_bytes - previous.tx_bytes) / timeDiff / 1024;
+
+                    labels.push(new Date(current.timestamp).toLocaleTimeString('zh-CN'));
+                    rxData.push(rxRate.toFixed(2));
+                    txData.push(txRate.toFixed(2));
+                }
+            }
+
+            trafficChart.data.labels = labels;
+            trafficChart.data.datasets[0].data = rxData;
+            trafficChart.data.datasets[1].data = txData;
+            trafficChart.update('none');
+        }
+
+        // Update alerts
+        function updateAlerts(alerts) {
+            const container = document.getElementById('alerts-container');
+
+            if (!alerts || alerts.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #a1a1aa;">暂无告警</p>';
+                return;
+            }
+
+            container.innerHTML = alerts.map(alert => `
+                <div class="alert-item ${alert.type === 'info' ? 'info' : ''}">
+                    <div class="message">${alert.message}</div>
+                    <div class="time">${formatTime(alert.timestamp)}</div>
+                </div>
+            `).join('');
+        }
+
+        // Update firewall logs
+        function updateFirewallLogs(logs) {
+            const container = document.getElementById('firewall-logs-container');
+
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #a1a1aa;">暂无日志</p>';
+                return;
+            }
+
+            container.innerHTML = logs.slice(0, 20).map(log => `
+                <div class="log-entry ${log.toLowerCase().includes('drop') ? 'dropped' : ''}">
+                    ${log}
+                </div>
+            `).join('');
+        }
+
+        // Change time range
+        function changeTimeRange(range) {
+            currentTimeRange = range;
+
+            // Update button states
+            document.querySelectorAll('.time-range button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Refresh data
+            updateData();
+        }
+
+        // Socket.IO real-time updates
+        socket.on('traffic-update', (data) => {
+            if (data.current) {
+                document.getElementById('total-rx').innerHTML =
+                    formatBytes(data.current.rx_bytes) + '<span class="unit"></span>';
+                document.getElementById('total-tx').innerHTML =
+                    formatBytes(data.current.tx_bytes) + '<span class="unit"></span>';
+            }
+
+            if (data.alerts && data.alerts.length > 0) {
+                updateAlerts(data.alerts);
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            updateData();
+
+            // Update every 10 seconds
+            setInterval(updateData, 10000);
+        });
+    </script>
+</body>
+</html>
