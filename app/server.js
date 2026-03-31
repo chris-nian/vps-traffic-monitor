@@ -5,6 +5,8 @@ const cron = require('node-cron');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const session = require('express-session');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const server = http.createServer(app);
@@ -23,6 +25,44 @@ if (!fs.existsSync(DATA_DIR)) {
 // Middleware
 app.use(express.static('public'));
 app.use(express.json());
+
+// Session configuration
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'vps-traffic-monitor-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    },
+    name: 'vps-monitor.sid'
+}));
+
+// Authentication middleware
+const requireAuth = (req, res, next) => {
+    if (req.session && req.session.authenticated) {
+        return next();
+    }
+    res.status(401).json({ error: 'Unauthorized' });
+};
+
+// Login attempt tracking (in-memory, for production use Redis)
+const loginAttempts = new Map();
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
+
+function cleanupOldAttempts() {
+    const now = Date.now();
+    for (const [ip, data] of loginAttempts.entries()) {
+        if (data.lockUntil && data.lockUntil < now) {
+            loginAttempts.delete(ip);
+        }
+    }
+}
+
+// Clean up old attempts every 5 minutes
+cron.schedule('*/5 * * * *', cleanupOldAttempts);
 
 // Read traffic data
 function readTrafficData() {
@@ -155,6 +195,216 @@ cron.schedule('*/1 * * * *', () => {
     data.firewall_logs = logs.slice(-50); // Keep last 50 log entries
     writeTrafficData(data);
 });
+
+// Authentication Routes
+
+// Check authentication status
+app.get('/api/auth/check', (req, res) => {
+    if (req.session && req.session.authenticated) {
+        res.json({
+            authenticated: true,
+            username: req.session.username
+        });
+    } else {
+        res.status(401).json({ authenticated: false });
+    }
+});
+
+// Login endpoint
+app.post('/api/login', async (req, res) => {
+    const { username, password } = req.body;
+    const ip = req.ip || req.connection.remoteAddress;
+
+    // Check if IP is locked out
+    const attempts = loginAttempts.get(ip);
+    if (attempts && attempts.lockUntil && attempts.lockUntil > Date.now()) {
+        const remainingTime = Math.ceil((attempts.lockUntil - Date.now()) / 1000 / 60);
+        return res.status(429).json({
+            success: false,
+            message: `账户已锁定，请在 ${remainingTime} 分钟后重试`,
+            lockoutTime: attempts.lockUntil,
+            lockoutDuration: LOCKOUT_DURATION
+        });
+    }
+
+    // Load admin credentials from config file
+    let adminCredentials;
+    try {
+        const configPath = path.join(__dirname, 'admin-config.json');
+        if (fs.existsSync(configPath)) {
+            adminCredentials = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        } else {
+            // Default credentials (should be changed)
+            adminCredentials = {
+                username: 'admin',
+                passwordHash: bcrypt.hashSync('admin123', 10)
+            };
+            // Save default config
+            fs.writeFileSync(configPath, JSON.stringify(adminCredentials, null, 2));
+        }
+    } catch (error) {
+        console.error('Error loading admin config:', error);
+        return res.status(500).json({
+            success: false,
+            message: '服务器配置错误'
+        });
+    }
+
+    // Validate credentials
+    if (username === adminCredentials.username) {
+        const isPasswordValid = await bcrypt.compare(password, adminCredentials.passwordHash);
+
+        if (isPasswordValid) {
+            // Successful login - reset attempts
+            loginAttempts.delete(ip);
+
+            req.session.authenticated = true;
+            req.session.username = username;
+            req.session.loginTime = Date.now();
+
+            return res.json({
+                success: true,
+                message: '登录成功'
+            });
+        }
+    }
+
+    // Failed login attempt
+    if (!attempts) {
+        loginAttempts.set(ip, { count: 1, lockUntil: null });
+    } else {
+        attempts.count++;
+        if (attempts.count >= MAX_ATTEMPTS) {
+            attempts.lockUntil = Date.now() + LOCKOUT_DURATION;
+            attempts.count = 0;
+            loginAttempts.set(ip, attempts);
+
+            return res.status(429).json({
+                success: false,
+                message: `登录失败次数过多，账户已锁定 ${LOCKOUT_DURATION / 60000} 分钟`,
+                lockoutTime: attempts.lockUntil,
+                lockoutDuration: LOCKOUT_DURATION
+            });
+        } else {
+            loginAttempts.set(ip, attempts);
+        }
+    }
+
+    const remainingAttempts = MAX_ATTEMPTS - (attempts?.count || 0);
+    res.status(401).json({
+        success: false,
+        message: '用户名或密码错误',
+        remainingAttempts: remainingAttempts
+    });
+});
+
+// Logout endpoint
+app.post('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('Logout error:', err);
+            return res.status(500).json({ success: false, message: '退出登录失败' });
+        }
+        res.json({ success: true, message: '已成功退出登录' });
+    });
+});
+
+// Firewall Rules Management
+
+// Get firewall rules
+app.get('/api/firewall/rules', requireAuth, async (req, res) => {
+    try {
+        const rules = await getFirewallRules();
+        res.json(rules);
+    } catch (error) {
+        console.error('Error getting firewall rules:', error);
+        res.status(500).json({ error: 'Failed to get firewall rules', message: error.message });
+    }
+});
+
+function getFirewallRules() {
+    return new Promise((resolve, reject) => {
+        try {
+            // Get iptables rules
+            const iptablesOutput = execSync('iptables -L -n -v --line-numbers 2>/dev/null || echo "No iptables rules"', { encoding: 'utf8' });
+
+            // Parse iptables output
+            const chains = {};
+            const lines = iptablesOutput.split('\n');
+
+            let currentChain = null;
+            let inRulesSection = false;
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+
+                // Match chain header (e.g., "Chain INPUT (policy ACCEPT)")
+                const chainMatch = trimmed.match(/^Chain (\w+) \(policy (\w+)\)/);
+                if (chainMatch) {
+                    currentChain = chainMatch[1];
+                    const policy = chainMatch[2];
+                    chains[currentChain] = {
+                        policy: policy,
+                        rules: []
+                    };
+                    inRulesSection = false;
+                    continue;
+                }
+
+                // Skip header lines
+                if (trimmed.includes('pkts bytes') || trimmed.includes('target prot opt source destination')) {
+                    inRulesSection = true;
+                    continue;
+                }
+
+                // Parse rule line
+                if (inRulesSection && currentChain && trimmed && !trimmed.startsWith('Chain')) {
+                    const parts = trimmed.split(/\s+/).filter(p => p);
+
+                    if (parts.length >= 8) {
+                        const rule = {
+                            num: parts[0] || '',
+                            pkts: parts[1] || '',
+                            bytes: parts[2] || '',
+                            target: parts[3] || '',
+                            prot: parts[4] || '',
+                            opt: parts[5] || '',
+                            source: parts[6] || '',
+                            destination: parts[7] || '',
+                            options: parts.slice(8).join(' ') || ''
+                        };
+
+                        // Extract port info from options
+                        const dportMatch = rule.options.match(/dpt:(\d+)/);
+                        const sportMatch = rule.options.match(/spt:(\d+)/);
+                        if (dportMatch) rule.dport = dportMatch[1];
+                        if (sportMatch) rule.sport = sportMatch[1];
+
+                        chains[currentChain].rules.push(rule);
+                    }
+                }
+            }
+
+            // Calculate statistics
+            let totalRules = 0;
+            const stats = { total: 0 };
+            for (const [chainName, chainData] of Object.entries(chains)) {
+                const ruleCount = chainData.rules.length;
+                stats[chainName] = ruleCount;
+                stats.total += ruleCount;
+            }
+
+            resolve({
+                chains: chains,
+                stats: stats,
+                raw: iptablesOutput,
+                timestamp: Date.now()
+            });
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
 
 // API Routes
 app.get('/api/stats', (req, res) => {

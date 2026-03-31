@@ -6,12 +6,19 @@
   "scripts": {
     "start": "node server.js"
   },
-  "keywords": ["vps", "traffic", "monitor", "firewall"],
+  "keywords": [
+    "vps",
+    "traffic",
+    "monitor",
+    "firewall"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "express": "^4.18.2",
-    "socket.io": "^4.6.1",
-    "node-cron": "^3.0.2"
+    "express-session": "^1.19.0",
+    "node-cron": "^3.0.2",
+    "socket.io": "^4.6.1"
   }
 }
