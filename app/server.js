@@ -374,6 +374,22 @@ app.post('/api/change-password', requireAuth, async (req, res) => {
     }
 });
 
+// Audit log function
+function logAudit(action, details, username) {
+    const logEntry = {
+        timestamp: new Date().toISOString(),
+        action: action,
+        details: details,
+        username: username || 'unknown',
+        ip: details.ip || 'N/A'
+    };
+
+    const auditLogPath = path.join(DATA_DIR, 'audit.log');
+    const logLine = JSON.stringify(logEntry) + '\n';
+    fs.appendFileSync(auditLogPath, logLine);
+    console.log(`[AUDIT] ${logEntry.timestamp} - ${logEntry.username}: ${action}`);
+}
+
 // Firewall Rules Management
 
 // Get firewall rules
@@ -384,6 +400,212 @@ app.get('/api/firewall/rules', requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Error getting firewall rules:', error);
         res.status(500).json({ error: 'Failed to get firewall rules', message: error.message });
+    }
+});
+
+// Port Management - Get open ports
+app.get('/api/firewall/ports', requireAuth, async (req, res) => {
+    try {
+        const ports = await getOpenPorts();
+        res.json(ports);
+    } catch (error) {
+        console.error('Error getting open ports:', error);
+        res.status(500).json({ error: 'Failed to get open ports', message: error.message });
+    }
+});
+
+function getOpenPorts() {
+    return new Promise((resolve, reject) => {
+        try {
+            // Check if firewalld is active
+            const isFirewalldActive = execSync('systemctl is-active firewalld', { encoding: 'utf8' }).trim() === 'active';
+
+            if (isFirewalldActive) {
+                // Use firewalld
+                const portsOutput = execSync('firewall-cmd --list-ports', { encoding: 'utf8' });
+                const portsList = portsOutput.trim().split(/\s+/).filter(p => p);
+
+                resolve({
+                    backend: 'firewalld',
+                    ports: portsList.map(portStr => {
+                        const [port, protocol] = portStr.split('/');
+                        return { port: parseInt(port), protocol: protocol || 'tcp', raw: portStr };
+                    })
+                });
+            } else {
+                // Use iptables
+                const iptablesOutput = execSync('iptables -L INPUT -n -v --line-numbers', { encoding: 'utf8' });
+                const lines = iptablesOutput.split('\n');
+                const ports = [];
+
+                for (const line of lines) {
+                    const dportMatch = line.match(/dpt:(\d+)/);
+                    const acceptMatch = line.includes('ACCEPT');
+
+                    if (dportMatch && acceptMatch) {
+                        const port = parseInt(dportMatch[1]);
+                        if (!ports.find(p => p.port === port)) {
+                            ports.push({ port: port, protocol: 'tcp', raw: `${port}/tcp` });
+                        }
+                    }
+                }
+
+                resolve({
+                    backend: 'iptables',
+                    ports: ports
+                });
+            }
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+// Port Management - Open port
+app.post('/api/firewall/open-port', requireAuth, async (req, res) => {
+    try {
+        const { port, protocol } = req.body;
+        const username = req.session.username || 'unknown';
+
+        // Validate port number
+        const portNum = parseInt(port);
+        if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+            return res.status(400).json({
+                success: false,
+                message: '端口号必须在 1-65535 之间'
+            });
+        }
+
+        // Validate protocol
+        if (protocol !== 'tcp' && protocol !== 'udp') {
+            return res.status(400).json({
+                success: false,
+                message: '协议必须是 tcp 或 udp'
+            });
+        }
+
+        // Prevent closing essential ports
+        const protectedPorts = [22, 80, 443];
+        if (protectedPorts.includes(portNum)) {
+            logAudit('OPEN_PORT_BLOCKED', { port: portNum, protocol, reason: 'Protected port' }, username);
+            return res.status(403).json({
+                success: false,
+                message: `端口 ${portNum} 是受保护端口，无法关闭`
+            });
+        }
+
+        // Execute firewall command
+        const isFirewalldActive = execSync('systemctl is-active firewalld', { encoding: 'utf8' }).trim() === 'active';
+
+        if (isFirewalldActive) {
+            execSync(`firewall-cmd --permanent --add-port=${portNum}/${protocol}`, { encoding: 'utf8' });
+            execSync('firewall-cmd --reload', { encoding: 'utf8' });
+        } else {
+            execSync(`iptables -I INPUT -p ${protocol} --dport ${portNum} -j ACCEPT`, { encoding: 'utf8' });
+            execSync('service iptables save 2>/dev/null || iptables-save > /etc/sysconfig/iptables', { encoding: 'utf8' });
+        }
+
+        // Log audit
+        logAudit('OPEN_PORT', { port: portNum, protocol, backend: isFirewalldActive ? 'firewalld' : 'iptables' }, username);
+
+        res.json({
+            success: true,
+            message: `端口 ${portNum}/${protocol} 已开放`
+        });
+    } catch (error) {
+        console.error('Error opening port:', error);
+        res.status(500).json({
+            success: false,
+            message: '开放端口失败: ' + error.message
+        });
+    }
+});
+
+// Port Management - Close port
+app.post('/api/firewall/close-port', requireAuth, async (req, res) => {
+    try {
+        const { port, protocol } = req.body;
+        const username = req.session.username || 'unknown';
+
+        // Validate port number
+        const portNum = parseInt(port);
+        if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+            return res.status(400).json({
+                success: false,
+                message: '端口号必须在 1-65535 之间'
+            });
+        }
+
+        // Validate protocol
+        if (protocol !== 'tcp' && protocol !== 'udp') {
+            return res.status(400).json({
+                success: false,
+                message: '协议必须是 tcp 或 udp'
+            });
+        }
+
+        // Prevent closing essential ports
+        const protectedPorts = [22, 80, 443];
+        if (protectedPorts.includes(portNum)) {
+            logAudit('CLOSE_PORT_BLOCKED', { port: portNum, protocol, reason: 'Protected port' }, username);
+            return res.status(403).json({
+                success: false,
+                message: `端口 ${portNum} 是受保护端口，无法关闭`
+            });
+        }
+
+        // Execute firewall command
+        const isFirewalldActive = execSync('systemctl is-active firewalld', { encoding: 'utf8' }).trim() === 'active';
+
+        if (isFirewalldActive) {
+            execSync(`firewall-cmd --permanent --remove-port=${portNum}/${protocol}`, { encoding: 'utf8' });
+            execSync('firewall-cmd --reload', { encoding: 'utf8' });
+        } else {
+            execSync(`iptables -D INPUT -p ${protocol} --dport ${portNum} -j ACCEPT`, { encoding: 'utf8' });
+            execSync('service iptables save 2>/dev/null || iptables-save > /etc/sysconfig/iptables', { encoding: 'utf8' });
+        }
+
+        // Log audit
+        logAudit('CLOSE_PORT', { port: portNum, protocol, backend: isFirewalldActive ? 'firewalld' : 'iptables' }, username);
+
+        res.json({
+            success: true,
+            message: `端口 ${portNum}/${protocol} 已关闭`
+        });
+    } catch (error) {
+        console.error('Error closing port:', error);
+        res.status(500).json({
+            success: false,
+            message: '关闭端口失败: ' + error.message
+        });
+    }
+});
+
+// Get audit logs
+app.get('/api/firewall/audit-logs', requireAuth, async (req, res) => {
+    try {
+        const auditLogPath = path.join(DATA_DIR, 'audit.log');
+        let logs = [];
+
+        if (fs.existsSync(auditLogPath)) {
+            const logContent = fs.readFileSync(auditLogPath, 'utf8');
+            logs = logContent.trim().split('\n')
+                .filter(line => line.trim())
+                .map(line => {
+                    try {
+                        return JSON.parse(line);
+                    } catch (e) {
+                        return null;
+                    }
+                })
+                .filter(log => log !== null)
+                .slice(-100); // Last 100 entries
+        }
+
+        res.json({ logs });
+    } catch (error) {
+        console.error('Error getting audit logs:', error);
+        res.status(500).json({ error: 'Failed to get audit logs' });
     }
 });
 
