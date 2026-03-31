@@ -196,6 +196,11 @@ cron.schedule('*/1 * * * *', () => {
     writeTrafficData(data);
 });
 
+// Admin page route - serves HTML from views/, NOT from public/
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views', 'admin.html'));
+});
+
 // Authentication Routes
 
 // Check authentication status
