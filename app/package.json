@@ -1,14 +1,14 @@
 {
-  "name": "daily",
+  "name": "vps-traffic-monitor",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "VPS Traffic Monitor with Firewall Protection",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
-  "keywords": [],
+  "keywords": ["vps", "traffic", "monitor", "firewall"],
   "author": "",
-  "license": "ISC",
-  "description": "",
+  "license": "MIT",
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "express": "^5.2.1",
