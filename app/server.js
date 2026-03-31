@@ -309,6 +309,71 @@ app.post('/api/logout', (req, res) => {
     });
 });
 
+// Change password endpoint
+app.post('/api/change-password', requireAuth, async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({
+            success: false,
+            message: '请提供当前密码和新密码'
+        });
+    }
+
+    if (newPassword.length < 12) {
+        return res.status(400).json({
+            success: false,
+            message: '新密码长度至少需要 12 个字符'
+        });
+    }
+
+    try {
+        // Load admin credentials
+        const configPath = path.join(__dirname, 'admin-config.json');
+        let adminCredentials;
+
+        if (fs.existsSync(configPath)) {
+            adminCredentials = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        } else {
+            return res.status(500).json({
+                success: false,
+                message: '服务器配置错误'
+            });
+        }
+
+        // Verify current password
+        const isCurrentPasswordValid = await bcrypt.compare(currentPassword, adminCredentials.passwordHash);
+
+        if (!isCurrentPasswordValid) {
+            return res.status(401).json({
+                success: false,
+                message: '当前密码错误'
+            });
+        }
+
+        // Hash new password
+        const newPasswordHash = bcrypt.hashSync(newPassword, 10);
+
+        // Update credentials
+        adminCredentials.passwordHash = newPasswordHash;
+        fs.writeFileSync(configPath, JSON.stringify(adminCredentials, null, 2));
+
+        // Log the password change
+        console.log(`Password changed for user ${adminCredentials.username} at ${new Date().toISOString()}`);
+
+        res.json({
+            success: true,
+            message: '密码修改成功'
+        });
+    } catch (error) {
+        console.error('Password change error:', error);
+        res.status(500).json({
+            success: false,
+            message: '密码修改失败，请稍后重试'
+        });
+    }
+});
+
 // Firewall Rules Management
 
 // Get firewall rules
