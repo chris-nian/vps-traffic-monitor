@@ -1,0 +1,4 @@
+{
+  "username": "admin",
+  "passwordHash": "请运行: node -e \"const bcrypt=require('bcryptjs'); console.log(bcrypt.hashSync('your_password', 10))\""
+}

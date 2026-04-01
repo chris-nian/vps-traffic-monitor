@@ -14,7 +14,7 @@ const io = socketIo(server);
 const PORT = 8080;
 
 // Data storage
-const DATA_DIR = '/root/traffic-monitor/data';
+const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'traffic-data.json');
 
 // Ensure data directory exists
@@ -26,13 +26,16 @@ if (!fs.existsSync(DATA_DIR)) {
 app.use(express.static('public'));
 app.use(express.json());
 
+// Trust proxy (for correct IP behind reverse proxy)
+app.set('trust proxy', 1);
+
 // Session configuration
 app.use(session({
     secret: process.env.SESSION_SECRET || 'vps-traffic-monitor-secret-key-change-in-production',
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        secure: false, // Set to true only if behind HTTPS reverse proxy
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     },
@@ -87,17 +90,21 @@ function getNetworkStats() {
         const stats = fs.readFileSync('/proc/net/dev', 'utf8');
         const lines = stats.split('\n');
 
+        // Try common interface names
+        const ifNames = ['eth0', 'ens33', 'ens18', 'ens3', 'enp0s3', 'enp1s0'];
         for (const line of lines) {
-            if (line.includes('eth0:')) {
-                const parts = line.trim().split(/\s+/);
-                return {
-                    interface: 'eth0',
-                    rx_bytes: parseInt(parts[1]),
-                    rx_packets: parseInt(parts[2]),
-                    tx_bytes: parseInt(parts[9]),
-                    tx_packets: parseInt(parts[10]),
-                    timestamp: Date.now()
-                };
+            for (const ifName of ifNames) {
+                if (line.includes(ifName + ':')) {
+                    const parts = line.trim().split(/\s+/);
+                    return {
+                        interface: ifName,
+                        rx_bytes: parseInt(parts[1]),
+                        rx_packets: parseInt(parts[2]),
+                        tx_bytes: parseInt(parts[9]),
+                        tx_packets: parseInt(parts[10]),
+                        timestamp: Date.now()
+                    };
+                }
             }
         }
     } catch (error) {
@@ -267,6 +274,8 @@ app.post('/api/login', async (req, res) => {
             req.session.username = username;
             req.session.loginTime = Date.now();
 
+            logAudit('LOGIN_SUCCESS', { ip }, username);
+
             return res.json({
                 success: true,
                 message: '登录成功'
@@ -275,6 +284,7 @@ app.post('/api/login', async (req, res) => {
     }
 
     // Failed login attempt
+    logAudit('LOGIN_FAILED', { ip, attemptedUsername: username }, 'anonymous');
     if (!attempts) {
         loginAttempts.set(ip, { count: 1, lockUntil: null });
     } else {
@@ -305,6 +315,8 @@ app.post('/api/login', async (req, res) => {
 
 // Logout endpoint
 app.post('/api/logout', (req, res) => {
+    const username = req.session?.username;
+    logAudit('LOGOUT', { ip: req.ip }, username || 'unknown');
     req.session.destroy((err) => {
         if (err) {
             console.error('Logout error:', err);
@@ -312,6 +324,32 @@ app.post('/api/logout', (req, res) => {
         }
         res.json({ success: true, message: '已成功退出登录' });
     });
+});
+
+// System info endpoint
+app.get('/api/system-info', requireAuth, (req, res) => {
+    try {
+        const uptime = execSync('uptime -p', { encoding: 'utf8' }).trim();
+        const hostname = execSync('hostname', { encoding: 'utf8' }).trim();
+        const os = execSync('cat /etc/os-release 2>/dev/null | head -1 | cut -d= -f2 | tr -d \\"', { encoding: 'utf8' }).trim();
+        const kernel = execSync('uname -r', { encoding: 'utf8' }).trim();
+        const memInfo = execSync("free -m | awk '/Mem:/ {printf \"%d/%d MB (%.1f%%)\", $3, $2, $3/$2*100}'", { encoding: 'utf8' }).trim();
+        const diskInfo = execSync("df -h / | awk 'NR==2 {printf \"%s/%s (%s)\", $3, $2, $5}'", { encoding: 'utf8' }).trim();
+        const cpuLoad = execSync("cat /proc/loadavg | awk '{printf \"%.2f, %.2f, %.2f\", $1, $2, $3}'", { encoding: 'utf8' }).trim();
+
+        res.json({
+            hostname,
+            os,
+            kernel,
+            uptime,
+            memory: memInfo,
+            disk: diskInfo,
+            cpuLoad
+        });
+    } catch (error) {
+        console.error('Error getting system info:', error);
+        res.status(500).json({ error: 'Failed to get system info' });
+    }
 });
 
 // Change password endpoint
@@ -364,6 +402,7 @@ app.post('/api/change-password', requireAuth, async (req, res) => {
         fs.writeFileSync(configPath, JSON.stringify(adminCredentials, null, 2));
 
         // Log the password change
+        logAudit('PASSWORD_CHANGED', { ip: req.ip }, req.session.username);
         console.log(`Password changed for user ${adminCredentials.username} at ${new Date().toISOString()}`);
 
         res.json({

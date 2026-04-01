@@ -222,9 +222,32 @@
             50% { opacity: 0.5; }
         }
 
+        .admin-link {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            color: #a1a1aa;
+            text-decoration: none;
+            font-size: 0.9em;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .admin-link:hover {
+            background: rgba(0, 217, 255, 0.15);
+            border-color: #00d9ff;
+            color: #00d9ff;
+        }
+
     </style>
 </head>
 <body>
+    <a href="/admin" class="admin-link">管理面板</a>
     <div class="container">
         <div class="header">
             <h1>🔍 VPS 流量监控中心</h1>

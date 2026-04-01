@@ -102,6 +102,8 @@
             padding: 16px 24px;
             background: rgba(0,0,0,0.3);
             border-bottom: 1px solid rgba(255,255,255,0.1);
+            flex-wrap: wrap;
+            gap: 12px;
         }
 
         .admin-header h1 {
@@ -114,12 +116,13 @@
         .admin-header .user-info {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
         .admin-header .username { color: #a1a1aa; }
 
-        .btn-logout, .btn-back {
+        .btn-logout, .btn-back, .btn-nav {
             padding: 8px 16px;
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.2);
@@ -128,10 +131,17 @@
             cursor: pointer;
             font-size: 0.9em;
             text-decoration: none;
+            transition: all 0.2s;
         }
 
-        .btn-logout:hover, .btn-back:hover {
+        .btn-logout:hover, .btn-back:hover, .btn-nav:hover {
             background: rgba(255,255,255,0.2);
+        }
+
+        .btn-nav.active {
+            background: rgba(0,217,255,0.2);
+            border-color: #00d9ff;
+            color: #00d9ff;
         }
 
         .admin-content {
@@ -140,7 +150,40 @@
             padding: 24px;
         }
 
-        /* Port Management */
+        /* Tab navigation */
+        .tab-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #a1a1aa;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: #e4e4e7;
+        }
+
+        .tab-btn.active {
+            background: rgba(0,217,255,0.15);
+            border-color: #00d9ff;
+            color: #00d9ff;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Sections */
         .section {
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.1);
@@ -155,6 +198,39 @@
             font-size: 1.3em;
         }
 
+        .section h3 {
+            margin-bottom: 12px;
+            color: #e4e4e7;
+        }
+
+        /* System Info Grid */
+        .sys-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .sys-card {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .sys-card .sys-label {
+            color: #71717a;
+            font-size: 0.85em;
+            margin-bottom: 6px;
+        }
+
+        .sys-card .sys-value {
+            color: #e4e4e7;
+            font-size: 1.05em;
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        /* Port Management */
         .port-actions {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -208,6 +284,7 @@
             font-size: 1em;
             font-weight: 600;
             cursor: pointer;
+            transition: all 0.2s;
         }
 
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -217,9 +294,19 @@
             color: #1a1a2e;
         }
 
+        .btn-primary:hover:not(:disabled) { opacity: 0.9; }
+
         .btn-danger {
             background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
             color: #1a1a2e;
+        }
+
+        .btn-danger:hover:not(:disabled) { opacity: 0.9; }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #e4e4e7;
         }
 
         .port-item {
@@ -264,10 +351,72 @@
             color: #ff6b6b;
             cursor: pointer;
             font-size: 0.85em;
+            transition: all 0.2s;
         }
 
         .btn-close-port:hover {
             background: rgba(255,107,107,0.4);
+        }
+
+        /* Firewall Rules Table */
+        .chain-section { margin-bottom: 24px; }
+
+        .chain-title {
+            font-size: 1.05em;
+            color: #00d9ff;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid rgba(0,217,255,0.3);
+        }
+
+        .rules-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88em;
+        }
+
+        .rules-table thead { background: rgba(0,0,0,0.3); }
+
+        .rules-table th {
+            padding: 10px 12px;
+            text-align: left;
+            color: #a1a1aa;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .rules-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .rules-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+        .target-badge {
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            display: inline-block;
+        }
+
+        .target-badge.ACCEPT { background: rgba(0,255,136,0.2); color: #00ff88; }
+        .target-badge.DROP { background: rgba(255,107,107,0.2); color: #ff6b6b; }
+        .target-badge.REJECT { background: rgba(255,107,107,0.2); color: #ff6b6b; }
+        .target-badge.LOG { background: rgba(0,217,255,0.2); color: #00d9ff; }
+
+        .raw-output {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.82em;
+            color: #a1a1aa;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 400px;
+            overflow-y: auto;
         }
 
         /* Audit Logs */
@@ -277,13 +426,72 @@
             border-radius: 8px;
             margin-bottom: 8px;
             font-size: 0.9em;
+            border-left: 3px solid transparent;
         }
 
         .audit-entry .action { font-weight: bold; margin-bottom: 4px; }
-        .audit-entry .action.open { color: #00ff88; }
-        .audit-entry .action.close { color: #ff6b6b; }
-        .audit-entry .action.blocked { color: #ffd93d; }
+        .audit-entry.type-open { border-left-color: #00ff88; }
+        .audit-entry.type-open .action { color: #00ff88; }
+        .audit-entry.type-close { border-left-color: #ff6b6b; }
+        .audit-entry.type-close .action { color: #ff6b6b; }
+        .audit-entry.type-blocked { border-left-color: #ffd93d; }
+        .audit-entry.type-blocked .action { color: #ffd93d; }
+        .audit-entry.type-login { border-left-color: #00d9ff; }
+        .audit-entry.type-login .action { color: #00d9ff; }
+        .audit-entry.type-password { border-left-color: #c084fc; }
+        .audit-entry.type-password .action { color: #c084fc; }
+        .audit-entry.type-logout { border-left-color: #a1a1aa; }
+        .audit-entry.type-logout .action { color: #a1a1aa; }
         .audit-entry .meta { color: #71717a; font-size: 0.85em; margin-top: 4px; }
+
+        /* Change Password */
+        .password-section {
+            max-width: 480px;
+        }
+
+        .password-container { position: relative; }
+
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #71717a;
+            cursor: pointer;
+            font-size: 1.1em;
+            padding: 4px;
+        }
+
+        .toggle-password:hover { color: #a1a1aa; }
+
+        .password-strength {
+            margin-top: 8px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            display: none;
+        }
+
+        .password-strength.show { display: block; }
+        .password-strength.weak { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.3); color: #ff6b6b; }
+        .password-strength.medium { background: rgba(255,211,61,0.1); border: 1px solid rgba(255,211,61,0.3); color: #ffd93d; }
+        .password-strength.strong { background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); color: #00ff88; }
+
+        .requirements {
+            background: rgba(0,217,255,0.08);
+            border: 1px solid rgba(0,217,255,0.2);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            font-size: 0.85em;
+        }
+
+        .requirements h4 { color: #00d9ff; margin-bottom: 8px; }
+        .requirements ul { list-style-position: inside; color: #a1a1aa; line-height: 1.8; }
+        .requirements li.valid { color: #00ff88; }
+        .requirements li.invalid { color: #ff6b6b; }
 
         /* Toast */
         .toast {
@@ -310,6 +518,100 @@
             color: #a1a1aa;
             padding: 20px;
         }
+
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-bar select {
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            color: #e4e4e7;
+            font-size: 0.9em;
+        }
+
+        .filter-bar select:focus { outline: none; border-color: #00d9ff; }
+
+        .filter-bar label { color: #a1a1aa; font-size: 0.9em; }
+
+        .btn-sm {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            color: #e4e4e7;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+
+        .btn-sm:hover { background: rgba(255,255,255,0.2); }
+
+        .stats-mini {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .stat-mini {
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 12px 18px;
+            text-align: center;
+        }
+
+        .stat-mini .label { color: #71717a; font-size: 0.8em; margin-bottom: 4px; }
+        .stat-mini .value { font-size: 1.4em; font-weight: bold; color: #00d9ff; }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #1a1a2e;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+            .admin-header { padding: 12px 16px; }
+            .admin-content { padding: 16px; }
+            .rules-table { font-size: 0.78em; }
+            .tab-nav { gap: 4px; }
+            .tab-btn { padding: 8px 14px; font-size: 0.85em; }
+        }
+
+        /* Collapsible raw output */
+        .collapsible-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 12px 0;
+            color: #a1a1aa;
+            font-size: 0.9em;
+        }
+
+        .collapsible-header:hover { color: #e4e4e7; }
+
+        .collapsible-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .collapsible-body.open { max-height: 500px; }
     </style>
 </head>
 <body>
@@ -333,7 +635,7 @@
         </div>
     </div>
 
-    <!-- Admin Panel (hidden until login) -->
+    <!-- Admin Panel -->
     <div class="admin-panel" id="admin-panel">
         <div class="admin-header">
             <h1>VPS 管理面板</h1>
@@ -345,62 +647,170 @@
         </div>
 
         <div class="admin-content">
-            <!-- Port Management -->
-            <div class="section">
-                <h2>端口管理</h2>
+            <!-- Tab Navigation -->
+            <div class="tab-nav">
+                <button class="tab-btn active" onclick="switchTab('overview')">系统概览</button>
+                <button class="tab-btn" onclick="switchTab('ports')">端口管理</button>
+                <button class="tab-btn" onclick="switchTab('firewall')">防火墙规则</button>
+                <button class="tab-btn" onclick="switchTab('logs')">操作日志</button>
+                <button class="tab-btn" onclick="switchTab('password')">修改密码</button>
+            </div>
 
-                <div class="port-actions">
-                    <div class="port-form open-form">
-                        <h3>开放端口</h3>
-                        <div class="form-group">
-                            <label>端口号</label>
-                            <input type="number" id="open-port" min="1" max="65535" placeholder="1-65535">
-                        </div>
-                        <div class="form-group">
-                            <label>协议</label>
-                            <select id="open-protocol">
-                                <option value="tcp">TCP</option>
-                                <option value="udp">UDP</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-primary" onclick="openPort()">开放端口</button>
+            <!-- Tab: System Overview -->
+            <div id="tab-overview" class="tab-content active">
+                <div class="section">
+                    <h2>系统信息</h2>
+                    <div class="sys-grid" id="sys-info-grid">
+                        <div class="sys-card"><div class="sys-label">主机名</div><div class="sys-value" id="si-hostname">--</div></div>
+                        <div class="sys-card"><div class="sys-label">操作系统</div><div class="sys-value" id="si-os">--</div></div>
+                        <div class="sys-card"><div class="sys-label">内核版本</div><div class="sys-value" id="si-kernel">--</div></div>
+                        <div class="sys-card"><div class="sys-label">运行时间</div><div class="sys-value" id="si-uptime">--</div></div>
+                        <div class="sys-card"><div class="sys-label">内存使用</div><div class="sys-value" id="si-memory">--</div></div>
+                        <div class="sys-card"><div class="sys-label">磁盘使用</div><div class="sys-value" id="si-disk">--</div></div>
+                        <div class="sys-card"><div class="sys-label">CPU 负载</div><div class="sys-value" id="si-cpu">--</div></div>
                     </div>
-
-                    <div class="port-form close-form">
-                        <h3>关闭端口</h3>
-                        <div class="form-group">
-                            <label>端口号</label>
-                            <input type="number" id="close-port" min="1" max="65535" placeholder="1-65535">
-                        </div>
-                        <div class="form-group">
-                            <label>协议</label>
-                            <select id="close-protocol">
-                                <option value="tcp">TCP</option>
-                                <option value="udp">UDP</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-danger" onclick="closePort()">关闭端口</button>
-                    </div>
-                </div>
-
-                <h3 style="margin-bottom: 12px; color: #e4e4e7;">当前开放的端口</h3>
-                <div id="ports-container">
-                    <div class="empty-state">加载中...</div>
                 </div>
             </div>
 
-            <!-- Audit Logs -->
-            <div class="section">
-                <h2>操作日志</h2>
-                <div id="audit-container">
-                    <div class="empty-state">加载中...</div>
+            <!-- Tab: Port Management -->
+            <div id="tab-ports" class="tab-content">
+                <div class="section">
+                    <h2>端口管理</h2>
+                    <div class="port-actions">
+                        <div class="port-form open-form">
+                            <h3>开放端口</h3>
+                            <div class="form-group">
+                                <label>端口号</label>
+                                <input type="number" id="open-port" min="1" max="65535" placeholder="1-65535">
+                            </div>
+                            <div class="form-group">
+                                <label>协议</label>
+                                <select id="open-protocol">
+                                    <option value="tcp">TCP</option>
+                                    <option value="udp">UDP</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" onclick="openPort()">开放端口</button>
+                        </div>
+                        <div class="port-form close-form">
+                            <h3>关闭端口</h3>
+                            <div class="form-group">
+                                <label>端口号</label>
+                                <input type="number" id="close-port" min="1" max="65535" placeholder="1-65535">
+                            </div>
+                            <div class="form-group">
+                                <label>协议</label>
+                                <select id="close-protocol">
+                                    <option value="tcp">TCP</option>
+                                    <option value="udp">UDP</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-danger" onclick="closePort()">关闭端口</button>
+                        </div>
+                    </div>
+                    <h3>当前开放的端口</h3>
+                    <div id="ports-container">
+                        <div class="empty-state">加载中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Firewall Rules -->
+            <div id="tab-firewall" class="tab-content">
+                <div class="section">
+                    <h2>防火墙规则</h2>
+                    <div class="stats-mini" id="fw-stats">
+                        <div class="stat-mini"><div class="label">总规则数</div><div class="value" id="fw-total">--</div></div>
+                        <div class="stat-mini"><div class="label">INPUT</div><div class="value" id="fw-input">--</div></div>
+                        <div class="stat-mini"><div class="label">OUTPUT</div><div class="value" id="fw-output">--</div></div>
+                        <div class="stat-mini"><div class="label">FORWARD</div><div class="value" id="fw-forward">--</div></div>
+                    </div>
+                    <div class="filter-bar">
+                        <label>筛选链:</label>
+                        <select id="chain-filter" onchange="renderFirewallRules()">
+                            <option value="all">全部</option>
+                            <option value="INPUT">INPUT</option>
+                            <option value="OUTPUT">OUTPUT</option>
+                            <option value="FORWARD">FORWARD</option>
+                        </select>
+                        <label>筛选目标:</label>
+                        <select id="target-filter" onchange="renderFirewallRules()">
+                            <option value="all">全部</option>
+                            <option value="ACCEPT">ACCEPT</option>
+                            <option value="DROP">DROP</option>
+                            <option value="REJECT">REJECT</option>
+                        </select>
+                        <button class="btn-sm" onclick="loadFirewallRules()">刷新规则</button>
+                    </div>
+                    <div id="fw-rules-container">
+                        <div class="empty-state">加载中...</div>
+                    </div>
+                    <div class="collapsible-header" onclick="toggleRaw()">
+                        <span>原始 iptables 输出</span>
+                        <span id="raw-toggle-icon">展开 ▼</span>
+                    </div>
+                    <div class="collapsible-body" id="raw-body">
+                        <div class="raw-output" id="raw-output">加载中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Audit Logs -->
+            <div id="tab-logs" class="tab-content">
+                <div class="section">
+                    <h2>操作日志</h2>
+                    <div id="audit-container">
+                        <div class="empty-state">加载中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Change Password -->
+            <div id="tab-password" class="tab-content">
+                <div class="section password-section">
+                    <h2>修改管理员密码</h2>
+                    <div class="requirements">
+                        <h4>密码要求：</h4>
+                        <ul id="requirements-list">
+                            <li id="req-length">至少 12 个字符</li>
+                            <li id="req-uppercase">包含大写字母</li>
+                            <li id="req-lowercase">包含小写字母</li>
+                            <li id="req-number">包含数字</li>
+                            <li id="req-special">包含特殊字符 (!@#$%^&*)</li>
+                        </ul>
+                    </div>
+                    <form id="change-password-form">
+                        <div class="form-group">
+                            <label>当前密码</label>
+                            <div class="password-container">
+                                <input type="password" id="current-password" placeholder="请输入当前密码" required autocomplete="current-password">
+                                <button type="button" class="toggle-password" onclick="togglePwdVis('current-password')">👁</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>新密码</label>
+                            <div class="password-container">
+                                <input type="password" id="new-password" placeholder="请输入新密码" required autocomplete="new-password">
+                                <button type="button" class="toggle-password" onclick="togglePwdVis('new-password')">👁</button>
+                            </div>
+                            <div id="password-strength" class="password-strength"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>确认新密码</label>
+                            <div class="password-container">
+                                <input type="password" id="confirm-password" placeholder="请再次输入新密码" required autocomplete="new-password">
+                                <button type="button" class="toggle-password" onclick="togglePwdVis('confirm-password')">👁</button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="change-pwd-btn">修改密码</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // ---- Auth ----
+        // ================ Auth ================
         async function checkAuth() {
             try {
                 const res = await fetch('/api/auth/check');
@@ -415,8 +825,10 @@
             document.getElementById('login-overlay').classList.add('hidden');
             document.getElementById('admin-panel').classList.add('visible');
             document.getElementById('display-username').textContent = username;
+            loadSystemInfo();
             loadPorts();
             loadAuditLogs();
+            loadFirewallRules();
         }
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -433,7 +845,6 @@
                     body: JSON.stringify({ username, password })
                 });
                 const data = await res.json();
-
                 if (data.success) {
                     showAdmin(username);
                 } else {
@@ -451,8 +862,38 @@
             document.getElementById('login-password').value = '';
         }
 
-        // ---- Port Management ----
-        const PROTECTED_PORTS = [22, 80, 443];
+        // ================ Tab Switching ================
+        function switchTab(name) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            event.target.classList.add('active');
+
+            // Lazy load data
+            if (name === 'logs') loadAuditLogs();
+            if (name === 'firewall') loadFirewallRules();
+            if (name === 'ports') loadPorts();
+            if (name === 'overview') loadSystemInfo();
+        }
+
+        // ================ System Info ================
+        async function loadSystemInfo() {
+            try {
+                const res = await fetch('/api/system-info');
+                if (!res.ok) return;
+                const data = await res.json();
+                document.getElementById('si-hostname').textContent = data.hostname || '--';
+                document.getElementById('si-os').textContent = data.os || '--';
+                document.getElementById('si-kernel').textContent = data.kernel || '--';
+                document.getElementById('si-uptime').textContent = data.uptime || '--';
+                document.getElementById('si-memory').textContent = data.memory || '--';
+                document.getElementById('si-disk').textContent = data.disk || '--';
+                document.getElementById('si-cpu').textContent = data.cpuLoad || '--';
+            } catch (e) { /* ignore */ }
+        }
+
+        // ================ Port Management ================
+        const PROTECTED_PORTS = [22, 80, 443, 8080];
 
         async function loadPorts() {
             try {
@@ -472,7 +913,6 @@
                 container.innerHTML = '<div class="empty-state">暂无开放端口</div>';
                 return;
             }
-
             container.innerHTML = ports.map(p => {
                 const isProtected = PROTECTED_PORTS.includes(p.port);
                 return `<div class="port-item">
@@ -490,11 +930,7 @@
             const portEl = document.getElementById('open-port');
             const port = parseInt(portEl.value);
             const protocol = document.getElementById('open-protocol').value;
-
-            if (!port || port < 1 || port > 65535) {
-                return showToast('请输入有效的端口号 (1-65535)', 'error');
-            }
-
+            if (!port || port < 1 || port > 65535) return showToast('请输入有效的端口号 (1-65535)', 'error');
             try {
                 const res = await fetch('/api/firewall/open-port', {
                     method: 'POST',
@@ -504,20 +940,14 @@
                 const data = await res.json();
                 showToast(data.message, data.success ? 'success' : 'error');
                 if (data.success) { portEl.value = ''; loadPorts(); loadAuditLogs(); }
-            } catch (e) {
-                showToast('操作失败', 'error');
-            }
+            } catch (e) { showToast('操作失败', 'error'); }
         }
 
         async function closePort() {
             const portEl = document.getElementById('close-port');
             const port = parseInt(portEl.value);
             const protocol = document.getElementById('close-protocol').value;
-
-            if (!port || port < 1 || port > 65535) {
-                return showToast('请输入有效的端口号 (1-65535)', 'error');
-            }
-
+            if (!port || port < 1 || port > 65535) return showToast('请输入有效的端口号 (1-65535)', 'error');
             await doClosePort(port, protocol);
             portEl.value = '';
         }
@@ -537,12 +967,86 @@
                 const data = await res.json();
                 showToast(data.message, data.success ? 'success' : 'error');
                 if (data.success) { loadPorts(); loadAuditLogs(); }
+            } catch (e) { showToast('操作失败', 'error'); }
+        }
+
+        // ================ Firewall Rules ================
+        let firewallData = null;
+
+        async function loadFirewallRules() {
+            try {
+                const res = await fetch('/api/firewall/rules');
+                if (!res.ok) {
+                    document.getElementById('fw-rules-container').innerHTML =
+                        '<div class="empty-state" style="color:#ff6b6b;">加载失败 (需要登录)</div>';
+                    return;
+                }
+                const data = await res.json();
+                firewallData = data;
+
+                // Update stats
+                const stats = data.stats || {};
+                document.getElementById('fw-total').textContent = stats.total || 0;
+                document.getElementById('fw-input').textContent = stats.INPUT || 0;
+                document.getElementById('fw-output').textContent = stats.OUTPUT || 0;
+                document.getElementById('fw-forward').textContent = stats.FORWARD || 0;
+
+                document.getElementById('raw-output').textContent = data.raw || '无数据';
+                renderFirewallRules();
             } catch (e) {
-                showToast('操作失败', 'error');
+                document.getElementById('fw-rules-container').innerHTML =
+                    '<div class="empty-state" style="color:#ff6b6b;">加载失败</div>';
             }
         }
 
-        // ---- Audit Logs ----
+        function renderFirewallRules() {
+            if (!firewallData || !firewallData.chains) return;
+
+            const chainFilter = document.getElementById('chain-filter').value;
+            const targetFilter = document.getElementById('target-filter').value;
+            const container = document.getElementById('fw-rules-container');
+
+            let html = '';
+            for (const [chainName, chainData] of Object.entries(firewallData.chains)) {
+                if (chainFilter !== 'all' && chainFilter !== chainName) continue;
+
+                let rules = chainData.rules || [];
+                if (targetFilter !== 'all') rules = rules.filter(r => r.target === targetFilter);
+                if (rules.length === 0) continue;
+
+                html += `<div class="chain-section">
+                    <div class="chain-title">${chainName} 链 (默认策略: ${chainData.policy || '-'})</div>
+                    <table class="rules-table"><thead><tr>
+                        <th>序号</th><th>目标</th><th>协议</th><th>源地址</th><th>目标地址</th><th>端口</th><th>选项</th>
+                    </tr></thead><tbody>`;
+
+                for (const rule of rules) {
+                    const targetCls = ['ACCEPT','DROP','REJECT','LOG'].includes(rule.target) ? rule.target : '';
+                    html += `<tr>
+                        <td>${rule.num || '-'}</td>
+                        <td><span class="target-badge ${targetCls}">${rule.target || '-'}</span></td>
+                        <td style="color:#ffd93d;font-weight:600;">${rule.prot || 'all'}</td>
+                        <td style="font-family:monospace;color:#00d9ff;">${rule.source || '-'}</td>
+                        <td style="font-family:monospace;color:#00d9ff;">${rule.destination || '-'}</td>
+                        <td style="color:#00ff88;font-weight:600;">${rule.dport || (rule.sport || '-')}</td>
+                        <td>${rule.options || '-'}</td>
+                    </tr>`;
+                }
+                html += '</tbody></table></div>';
+            }
+
+            if (!html) html = '<div class="empty-state">没有匹配的防火墙规则</div>';
+            container.innerHTML = html;
+        }
+
+        function toggleRaw() {
+            const body = document.getElementById('raw-body');
+            const icon = document.getElementById('raw-toggle-icon');
+            body.classList.toggle('open');
+            icon.textContent = body.classList.contains('open') ? '收起 ▲' : '展开 ▼';
+        }
+
+        // ================ Audit Logs ================
         async function loadAuditLogs() {
             try {
                 const res = await fetch('/api/firewall/audit-logs');
@@ -559,18 +1063,121 @@
                 return;
             }
 
-            container.innerHTML = logs.slice(-20).reverse().map(log => {
-                const cls = log.action.includes('BLOCKED') ? 'blocked' :
-                            log.action.includes('CLOSE') ? 'close' : 'open';
+            container.innerHTML = logs.slice(-50).reverse().map(log => {
+                const action = log.action || '';
+                let typeCls = 'type-login';
+                if (action.includes('BLOCKED')) typeCls = 'type-blocked';
+                else if (action.includes('CLOSE')) typeCls = 'type-close';
+                else if (action.includes('OPEN')) typeCls = 'type-open';
+                else if (action.includes('PASSWORD')) typeCls = 'type-password';
+                else if (action.includes('LOGOUT')) typeCls = 'type-logout';
+                else if (action.includes('LOGIN_FAILED')) typeCls = 'type-blocked';
+                else if (action.includes('LOGIN')) typeCls = 'type-login';
+
                 const details = log.details || {};
-                return `<div class="audit-entry">
-                    <div class="action ${cls}">${log.action} - 端口 ${details.port || '?'}/${details.protocol || '?'}</div>
-                    <div class="meta">${log.timestamp} | 用户: ${log.username}</div>
+                let desc = action;
+                if (details.port) desc += ` - 端口 ${details.port}/${details.protocol || '?'}`;
+                if (details.attemptedUsername) desc += ` (用户: ${details.attemptedUsername})`;
+
+                return `<div class="audit-entry ${typeCls}">
+                    <div class="action">${desc}</div>
+                    <div class="meta">${log.timestamp || '--'} | 用户: ${log.username || '--'} | IP: ${log.ip || details.ip || '--'}</div>
                 </div>`;
             }).join('');
         }
 
-        // ---- Toast ----
+        // ================ Change Password ================
+        const reqList = {
+            length: document.getElementById('req-length'),
+            uppercase: document.getElementById('req-uppercase'),
+            lowercase: document.getElementById('req-lowercase'),
+            number: document.getElementById('req-number'),
+            special: document.getElementById('req-special')
+        };
+
+        function togglePwdVis(id) {
+            const input = document.getElementById(id);
+            const btn = input.nextElementSibling;
+            if (input.type === 'password') { input.type = 'text'; btn.textContent = '🙈'; }
+            else { input.type = 'password'; btn.textContent = '👁'; }
+        }
+
+        function checkPwdStrength(password) {
+            const reqs = {
+                length: password.length >= 12,
+                uppercase: /[A-Z]/.test(password),
+                lowercase: /[a-z]/.test(password),
+                number: /\d/.test(password),
+                special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+            };
+
+            for (const [key, valid] of Object.entries(reqs)) {
+                if (reqList[key]) {
+                    reqList[key].classList.toggle('valid', valid);
+                    reqList[key].classList.toggle('invalid', !valid);
+                }
+            }
+
+            const score = Object.values(reqs).filter(Boolean).length;
+            const strDiv = document.getElementById('password-strength');
+            if (!password) { strDiv.classList.remove('show'); return false; }
+
+            let text, cls;
+            if (score <= 2) { text = '弱 - 建议使用更复杂的密码'; cls = 'weak'; }
+            else if (score <= 3) { text = '中等 - 可以更好'; cls = 'medium'; }
+            else { text = '强 - 良好的密码'; cls = 'strong'; }
+
+            strDiv.textContent = `密码强度: ${text}`;
+            strDiv.className = `password-strength show ${cls}`;
+            return score >= 3;
+        }
+
+        document.getElementById('new-password').addEventListener('input', (e) => {
+            checkPwdStrength(e.target.value);
+        });
+
+        document.getElementById('change-password-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const currentPwd = document.getElementById('current-password').value;
+            const newPwd = document.getElementById('new-password').value;
+            const confirmPwd = document.getElementById('confirm-password').value;
+            const btn = document.getElementById('change-pwd-btn');
+
+            if (newPwd !== confirmPwd) return showToast('新密码和确认密码不匹配', 'error');
+            if (!checkPwdStrength(newPwd)) return showToast('密码强度不足', 'error');
+            if (currentPwd === newPwd) return showToast('新密码不能与当前密码相同', 'error');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span>处理中...';
+
+            try {
+                const res = await fetch('/api/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ currentPassword: currentPwd, newPassword: newPwd })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    showToast('密码修改成功！请重新登录', 'success');
+                    document.getElementById('change-password-form').reset();
+                    document.getElementById('password-strength').classList.remove('show');
+                    Object.values(reqList).forEach(r => r.classList.remove('valid', 'invalid'));
+                    setTimeout(() => {
+                        logout();
+                    }, 1500);
+                } else {
+                    showToast(data.message || '密码修改失败', 'error');
+                }
+            } catch (err) {
+                showToast('网络错误，请稍后重试', 'error');
+            }
+
+            btn.disabled = false;
+            btn.textContent = '修改密码';
+        });
+
+        // ================ Toast ================
         function showToast(msg, type) {
             const el = document.createElement('div');
             el.className = 'toast ' + type;
@@ -579,9 +1186,18 @@
             setTimeout(() => el.remove(), 3000);
         }
 
-        // ---- Init ----
+        // ================ Init ================
         checkAuth();
-        setInterval(() => { loadPorts(); loadAuditLogs(); }, 30000);
+        setInterval(() => {
+            // Only refresh if visible
+            const activeTab = document.querySelector('.tab-content.active');
+            if (activeTab) {
+                const id = activeTab.id;
+                if (id === 'tab-ports') loadPorts();
+                if (id === 'tab-logs') loadAuditLogs();
+                if (id === 'tab-overview') loadSystemInfo();
+            }
+        }, 30000);
     </script>
 </body>
 </html>
