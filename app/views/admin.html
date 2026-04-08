@@ -893,7 +893,7 @@
         }
 
         // ================ Port Management ================
-        const PROTECTED_PORTS = [22, 80, 443, 8080];
+        // Protected ports list removed - all ports can be managed freely
 
         async function loadPorts() {
             try {
@@ -914,14 +914,12 @@
                 return;
             }
             container.innerHTML = ports.map(p => {
-                const isProtected = PROTECTED_PORTS.includes(p.port);
                 return `<div class="port-item">
                     <div class="port-info">
                         <span class="port-number">${p.port}</span>
                         <span class="port-protocol">${p.protocol}</span>
-                        ${isProtected ? '<span class="badge-protected">受保护</span>' : ''}
                     </div>
-                    ${isProtected ? '' : `<button class="btn-close-port" onclick="closePortByBtn(${p.port},'${p.protocol}')">关闭</button>`}
+                    <button class="btn-close-port" onclick="closePortByBtn(${p.port},'${p.protocol}')">关闭</button>
                 </div>`;
             }).join('');
         }

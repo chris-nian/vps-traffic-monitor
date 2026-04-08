@@ -528,15 +528,6 @@ app.post('/api/firewall/open-port', requireAuth, async (req, res) => {
             });
         }
 
-        // Prevent closing essential ports
-        const protectedPorts = [22, 80, 443];
-        if (protectedPorts.includes(portNum)) {
-            logAudit('OPEN_PORT_BLOCKED', { port: portNum, protocol, reason: 'Protected port' }, username);
-            return res.status(403).json({
-                success: false,
-                message: `端口 ${portNum} 是受保护端口，无法关闭`
-            });
-        }
 
         // Execute firewall command
         const isFirewalldActive = execSync('systemctl is-active firewalld', { encoding: 'utf8' }).trim() === 'active';
@@ -588,15 +579,6 @@ app.post('/api/firewall/close-port', requireAuth, async (req, res) => {
             });
         }
 
-        // Prevent closing essential ports
-        const protectedPorts = [22, 80, 443];
-        if (protectedPorts.includes(portNum)) {
-            logAudit('CLOSE_PORT_BLOCKED', { port: portNum, protocol, reason: 'Protected port' }, username);
-            return res.status(403).json({
-                success: false,
-                message: `端口 ${portNum} 是受保护端口，无法关闭`
-            });
-        }
 
         // Execute firewall command
         const isFirewalldActive = execSync('systemctl is-active firewalld', { encoding: 'utf8' }).trim() === 'active';
